@@ -1,0 +1,23 @@
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Dados (arquivos grandes: baixar do Kaggle, não versionar)
+data/*
+!data/.gitkeep
+
+# Segredos e arquivos locais
+.env
+*.key
+
+# Editor e sistema
+.vscode/
+.DS_Store
+Thumbs.db
