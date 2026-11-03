@@ -15,14 +15,15 @@ ciência de dados.
 
 ## Equipe
 
-| Nome | Papel | GitHub |
-|---|---|---|
-| Mateus | Líder técnico | @mateuspauperio |
-| Lucas | Participante | @(a preencher) |
-| Lucca | Participante | @(a preencher) |
-| Marcos | Participante | @(a preencher) |
+| Nome | Papel | Frente inicial | GitHub |
+|---|---|---|---|
+| Mateus | Líder técnico | Coordenação, revisão e integração | @mateuspauperio |
+| Lucas Merces | Participante | A. Dados | @lucasmoraismerces |
+| Lucca | Participante | B. Modelos | @devluccam |
+| Marcos | Participante | C. App e visual | @mszporer03-a11y |
 
-Frentes de trabalho: **A. Dados**, **B. Modelos**, **C. App e visual** (responsáveis a definir na primeira reunião).
+Cada pessoa começa por uma frente, para não duplicar trabalho nem misturar arquivos. Todos podem
+ajudar nas outras frentes e a divisão pode mudar ao longo do projeto.
 
 ## O que será entregue
 
@@ -34,16 +35,15 @@ Frentes de trabalho: **A. Dados**, **B. Modelos**, **C. App e visual** (respons�
 
 ## Cronograma
 
-Reunião semanal. Entrega-alvo: 30/11, com margem até 06/12.
+Reunião semanal. Entrega no início de dezembro (até 06/12). Há feriados nacionais em 02/11 e 20/11.
 
 | Semana | Período | Foco |
 |---|---|---|
-| 1 | 26/10 a 01/11 | Kickoff, ambiente e primeiro contato com os dados |
-| 2 | 02/11 a 08/11 | Dados diários, análise exploratória, features e baselines |
-| 3 | 09/11 a 15/11 | Treino e comparação dos modelos |
-| 4 | 16/11 a 22/11 | Ajuste de hiperparâmetros, Joblib e app com as abas básicas |
-| 5 | 23/11 a 29/11 | App completo, README e material no Canva |
-| 6 | 30/11 a 06/12 | Revisão final, ensaio da demonstração e entrega |
+| 1 | 02/11 a 08/11 | Kickoff, ambiente, dataset e primeiros passos com os dados |
+| 2 | 09/11 a 15/11 | Dados diários, features, baselines e primeiros modelos |
+| 3 | 16/11 a 22/11 | Comparação dos modelos, ajuste de hiperparâmetros e Joblib |
+| 4 | 23/11 a 29/11 | App em Streamlit, protótipo no Figma e README |
+| 5 | 30/11 a 06/12 | Revisão final, material no Canva, ensaio da demonstração e entrega |
 
 O andamento das tarefas fica na aba **Projects** deste repositório.
 
