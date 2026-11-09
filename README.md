@@ -15,15 +15,22 @@ ciência de dados.
 
 ## Equipe
 
-| Nome | Papel | Frente inicial | GitHub |
+| Nome | Papel | Área inicial | GitHub |
 |---|---|---|---|
 | Mateus | Líder técnico | Coordenação, revisão e integração | @mateuspauperio |
-| Lucas Merces | Participante | A. Dados | @lucasmoraismerces |
-| Lucca | Participante | B. Modelos | @devluccam |
-| Marcos | Participante | C. App e visual | @mszporer03-a11y |
+| Lucas Merces | Participante | Dados | @lucasmoraismerces |
+| Lucca | Participante | Modelos | @devluccam |
+| Marcos | Participante | App e visual | @mszporer03-a11y |
 
-Cada pessoa começa por uma frente, para não duplicar trabalho nem misturar arquivos. Todos podem
-ajudar nas outras frentes e a divisão pode mudar ao longo do projeto.
+Cada pessoa é responsável principal por uma área, mas todos participam de todas as etapas e podem
+ajudar uns aos outros. A divisão pode mudar ao longo do projeto.
+
+## Como o trabalho está organizado
+
+- **Reunião semanal, às quartas-feiras.**
+- **Nas reuniões,** o grupo trabalha junto nos pontos que destravam os demais (por exemplo, a construção dos dados diários).
+- **Entre as reuniões,** cada pessoa avança em tarefas da sua área, em paralelo, com base nos combinados entre as áreas (formatos de arquivos, nomes de funções e formato das tabelas), registrados em [docs/combinados.md](docs/combinados.md).
+- **Todo trabalho entra por pull request,** revisado pelo líder, de modo que a branch `main` esteja sempre funcionando.
 
 ## O que será entregue
 
@@ -35,15 +42,13 @@ ajudar nas outras frentes e a divisão pode mudar ao longo do projeto.
 
 ## Cronograma
 
-Reunião semanal. Entrega no início de dezembro (até 06/12). Há feriados nacionais em 02/11 e 20/11.
-
-| Semana | Período | Foco |
+| Reunião | Data | Foco |
 |---|---|---|
-| 1 | 02/11 a 08/11 | Kickoff, ambiente, dataset e primeiros passos com os dados |
-| 2 | 09/11 a 15/11 | Dados diários, features, baselines e primeiros modelos |
-| 3 | 16/11 a 22/11 | Comparação dos modelos, ajuste de hiperparâmetros e Joblib |
-| 4 | 23/11 a 29/11 | App em Streamlit, protótipo no Figma e README |
-| 5 | 30/11 a 06/12 | Revisão final, material no Canva, ensaio da demonstração e entrega |
+| 1 | 11/11 | Apresentação, dados diários em conjunto e combinados entre as áreas |
+| 2 | 18/11 | Integração de variáveis, métricas e baselines; início do treino dos modelos |
+| 3 | 25/11 | Comparação dos modelos, salvamento com Joblib e app com os modelos |
+| 4 | 02/12 | Revisão final e ensaio da demonstração |
+| Entrega | até 06/12 | Execução do projeto do zero, versão final e material no Canva |
 
 O andamento das tarefas fica na aba **Projects** deste repositório.
 
@@ -87,7 +92,8 @@ condições de uso na página do dataset.
 
 ## Como contribuir
 
-Leia o [CONTRIBUTING.md](CONTRIBUTING.md) antes de enviar qualquer alteração.
+Leia o [CONTRIBUTING.md](CONTRIBUTING.md) antes de enviar qualquer alteração e consulte os
+[combinados entre as áreas](docs/combinados.md).
 
 ## Licença
 
