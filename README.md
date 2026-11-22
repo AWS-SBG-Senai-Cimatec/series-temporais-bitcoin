@@ -1,9 +1,6 @@
 # Comparador de Técnicas de Machine Learning para Séries Temporais (Bitcoin)
 
-Projeto do **Time de Projetos e Ações do AWS SBG SENAI CIMATEC**. Desenvolvimento de um comparador
-entre técnicas de treinamento de modelos de machine learning para séries temporais, aplicado à
-previsão do preço do Bitcoin (BTC/USD), com o objetivo de praticar boas práticas de modelagem e de
-ciência de dados.
+Projeto do **Time de Projetos e Ações do AWS SBG SENAI CIMATEC**. Desenvolvimento de um comparador entre técnicas de treinamento de modelos de machine learning para séries temporais, aplicado à previsão do preço do Bitcoin (BTC/USD), com o objetivo de praticar boas práticas de modelagem e de ciência de dados.
 
 > Projeto educacional, sem fins lucrativos e com custo zero. Não é recomendação financeira.
 
@@ -22,8 +19,7 @@ ciência de dados.
 | Lucca | Participante | Modelos | @devluccam |
 | Marcos | Participante | App e visual | @mszporer03-a11y |
 
-Cada pessoa é responsável principal por uma área, mas todos participam de todas as etapas e podem
-ajudar uns aos outros. A divisão pode mudar ao longo do projeto.
+Cada pessoa é responsável principal por uma área, mas todos participam de todas as etapas e podem ajudar uns aos outros. A divisão pode mudar ao longo do projeto.
 
 ## Como o trabalho está organizado
 
@@ -52,14 +48,28 @@ ajudar uns aos outros. A divisão pode mudar ao longo do projeto.
 
 O andamento das tarefas fica na aba **Projects** deste repositório.
 
+## O que já foi feito até aqui
+
+- **Dashboard interativo em Streamlit (`app.py`)** estruturado em Python (`streamlit`, `pandas`, `numpy`, `altair`), com visualização de curvas no tempo, ranking e análise dos maiores/menores erros (MAE, MAPE e percentual de dias dentro de 1% do preço real em relação a `Real`, `Naive (base)` e `Exemplo`), além de tabela e download de dados.
+- **Base de exemplo em `para_o_grupo/`** para testar e validar o fluxo do dashboard antes da entrada dos dados e modelos definitivos.
+- **Organização e higiene do repositório:** limpeza de branches antigas já mescladas para manter a `main` atualizada e alinhada ao fluxo por pull request.
+
+## Próximos passos (daqui para frente)
+
+- **Reunião de quarta-feira (25/11):** alinhar o avanço da consolidação dos dados (com Lucas), a geração e o salvamento dos modelos com Joblib (com Lucca) e a integração visual e do app (com Marcos).
+- **Integração dos modelos e dados reais:** substituir gradualmente a base de exemplo (`para_o_grupo/previsoes_exemplo.csv`) pelas previsões reais dos modelos treinados e avaliados sem vazamento temporal.
+- **Revisão final, ensaio e entrega (02/12 a 06/12):** consolidar a execução do projeto do zero, revisar documentação e código na `main` e finalizar o material de apresentação para eventos.
+
 ## Estrutura do repositório
 
-```
+```text
 ├── data/          dados (não versionados; ver "Dados")
 ├── docs/          documentação do projeto
 ├── models/        modelos treinados (.joblib)
 ├── notebooks/     experimentos e análises
+├── para_o_grupo/  arquivos de apoio e dados de exemplo para integração
 ├── src/           código reutilizável
+├── app.py         aplicação web interativa em Streamlit
 ├── CONTRIBUTING.md
 ├── LICENSE
 ├── README.md
@@ -70,8 +80,8 @@ O andamento das tarefas fica na aba **Projects** deste repositório.
 
 Pré-requisitos: Python 3.10 ou superior, Git e VS Code.
 
-```
-git clone https://github.com/AWS-SBG-Senai-Cimatec/series-temporais-bitcoin.git
+```bash
+git clone [https://github.com/AWS-SBG-Senai-Cimatec/series-temporais-bitcoin.git](https://github.com/AWS-SBG-Senai-Cimatec/series-temporais-bitcoin.git)
 cd series-temporais-bitcoin
 python -m venv .venv
 .venv\Scripts\Activate.ps1        # Windows (PowerShell)
@@ -79,21 +89,22 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-As instruções de uso do projeto serão completadas ao longo do desenvolvimento.
+Para abrir o protótipo do dashboard em Streamlit (atualmente rodando com a base de exemplo em `para_o_grupo/previsoes_exemplo.csv` até a entrada dos dados e modelos oficiais):
+
+```bash
+streamlit run app.py
+```
 
 ## Dados
 
 Dataset **Bitcoin Historical Data** (Zielak / mczielinski), no Kaggle:
 https://www.kaggle.com/datasets/mczielinski/bitcoin-historical-data
 
-São candles de 1 minuto da exchange Bitstamp. O arquivo é grande (cerca de 390 MB) e **não deve ser
-enviado ao GitHub**: cada pessoa baixa o seu e coloca na pasta `data/`. Confira a licença e as
-condições de uso na página do dataset.
+São candles de 1 minuto da exchange Bitstamp. O arquivo é grande (cerca de 390 MB) e **não deve ser enviado ao GitHub**: cada pessoa baixa o seu e coloca na pasta `data/`. Confira a licença e as condições de uso na página do dataset.
 
 ## Como contribuir
 
-Leia o [CONTRIBUTING.md](CONTRIBUTING.md) antes de enviar qualquer alteração e consulte os
-[combinados entre as áreas](docs/combinados.md).
+Leia o [CONTRIBUTING.md](CONTRIBUTING.md) antes de enviar qualquer alteração e consulte os [combinados entre as áreas](docs/combinados.md).
 
 ## Licença
 
