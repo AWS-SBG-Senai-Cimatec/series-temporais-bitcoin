@@ -7,14 +7,25 @@ import pandas as pd
 import streamlit as st
 
 # ==============================================================================
-# CONFIGURAÇÃO CENTRAL DO ARQUIVO DE PREVISÕES
-# Troque este caminho quando o CSV oficial dos modelos/testes estiver pronto.
+# CONFIGURAÇÃO CENTRAL DOS ARQUIVOS DE PREVISÕES
+# Prioriza previsoes_modelos.csv em data/ e faz fallback para exemplo.
 # ==============================================================================
-CAMINHO_PREVISOES = Path("para_o_grupo/previsoes_exemplo.csv")
-CAMINHOS_FALLBACK = [
+CAMINHOS_PREVISOES = [
+    Path("data/previsoes_modelos.csv"),
+    Path("para_o_grupo/previsoes_modelos.csv"),
+    Path("para_o_grupo/previsoes_exemplo.csv"),
     Path("data/previsoes_exemplo.csv"),
     Path("previsoes_exemplo.csv"),
 ]
+
+MAPA_ROTULOS = {
+    "real": "Real",
+    "naive": "Naive (base)",
+    "regressao_linear": "Regressão Linear",
+    "ridge": "Ridge",
+    "knn": "KNN (variação)",
+    "exemplo": "Exemplo",
+}
 
 st.set_page_config(
     page_title="Bitcoin ML | Comparador de Séries Temporais",
@@ -123,23 +134,19 @@ st.markdown(
 )
 
 
-def resolver_caminho_csv(caminho_principal: Path, fallbacks: list[Path]) -> Path:
-    """Resolve o caminho do CSV priorizando o caminho principal configurado."""
-    if caminho_principal.exists():
-        return caminho_principal
-    for candidato in fallbacks:
+def resolver_caminho_csv(caminhos: list[Path]) -> Path:
+    """Resolve o primeiro arquivo de previsões disponível na lista."""
+    for candidato in caminhos:
         if candidato.exists():
             return candidato
-    return caminho_principal
+    return caminhos[0]
 
 
 def formatar_nome_curto(nome: str) -> str:
     """Deixa os rótulos curtos e claros para legenda e tabelas."""
-    baixa = nome.lower()
-    if baixa == "real":
-        return "Real"
-    if baixa == "naive":
-        return "Naive (base)"
+    baixa = nome.strip().lower()
+    if baixa in MAPA_ROTULOS:
+        return MAPA_ROTULOS[baixa]
     return nome.replace("_", " ").title()
 
 
@@ -148,8 +155,10 @@ def montar_grafico_linhas(
     nome_data: str,
     titulo_eixo_y: str,
 ) -> alt.Chart:
-    """Gráfico de linhas temporal com cores fixas em Azul, Vermelho e Verde."""
-    df_long = df_series.reset_index().rename(columns={df_series.index.name or "index": nome_data})
+    """Gráfico de linhas temporal com paleta fixa."""
+    df_long = df_series.reset_index().rename(
+        columns={df_series.index.name or "index": nome_data}
+    )
     df_melt = df_long.melt(
         id_vars=[nome_data],
         var_name="Série",
@@ -189,10 +198,7 @@ def montar_grafico_linhas(
 
 
 def montar_grafico_barras_erro(df_comparativo: pd.DataFrame) -> alt.Chart:
-    """
-    Gráfico de barras com valores exibidos diretamente sobre cada barra
-    para leitura imediata sem depender apenas do eixo vertical.
-    """
+    """Gráfico de barras com rótulos de erro médio (%) sobre cada barra."""
     df_bar = df_comparativo.copy()
     df_bar["Rotulo_Pct"] = df_bar["Erro médio (%)"].map(
         lambda v: f"{v:.2f}%" if pd.notna(v) else "-"
@@ -202,7 +208,11 @@ def montar_grafico_barras_erro(df_comparativo: pd.DataFrame) -> alt.Chart:
     modelos = df_bar["Série"].tolist()
     escala_cores = [cores_base[i % len(cores_base)] for i in range(len(modelos))]
 
-    max_val = float(df_bar["Erro médio (%)"].max()) if df_bar["Erro médio (%)"].notna().any() else 1.0
+    max_val = (
+        float(df_bar["Erro médio (%)"].max())
+        if df_bar["Erro médio (%)"].notna().any()
+        else 1.0
+    )
     limite_superior = max(max_val * 1.25, 0.5)
 
     base = alt.Chart(df_bar).encode(
@@ -228,8 +238,16 @@ def montar_grafico_barras_erro(df_comparativo: pd.DataFrame) -> alt.Chart:
         tooltip=[
             alt.Tooltip("Série:N", title="Série"),
             alt.Tooltip("Erro médio (%):Q", title="Erro médio (%)", format=".2f"),
-            alt.Tooltip("Diferença média (pontos):Q", title="Diferença média (pontos)", format=",.2f"),
-            alt.Tooltip("Dias até 1% do real:Q", title="Dias até 1% do real (%)", format=".1f"),
+            alt.Tooltip(
+                "Diferença média (pontos):Q",
+                title="Diferença média (pontos)",
+                format=",.2f",
+            ),
+            alt.Tooltip(
+                "Dias até 1% do real:Q",
+                title="Dias até 1% do real (%)",
+                format=".1f",
+            ),
         ],
     )
 
@@ -246,12 +264,14 @@ def montar_grafico_barras_erro(df_comparativo: pd.DataFrame) -> alt.Chart:
 
 
 @st.cache_data
-def carregar_dados_previsao(caminho: Path) -> tuple[pd.DataFrame, str, str | None, list[str]]:
+def carregar_dados_previsao(
+    caminho: Path,
+) -> tuple[pd.DataFrame, str, str | None, list[str]]:
     """Carrega e padroniza o CSV de previsões."""
     if not caminho.exists():
         raise FileNotFoundError(
             f"Arquivo não encontrado em '{caminho}'. "
-            "Verifique o caminho em CAMINHO_PREVISOES no topo do app.py."
+            "Gere data/previsoes_modelos.csv ou mantenha para_o_grupo/previsoes_exemplo.csv."
         )
 
     df = pd.read_csv(caminho)
@@ -261,8 +281,12 @@ def carregar_dados_previsao(caminho: Path) -> tuple[pd.DataFrame, str, str | Non
     df.columns = [str(col).strip() for col in df.columns]
 
     candidatos_data = [
-        col for col in df.columns
-        if any(chave in col.lower() for chave in ["data", "date", "ds", "timestamp", "dia"])
+        col
+        for col in df.columns
+        if any(
+            chave in col.lower()
+            for chave in ["data", "date", "ds", "timestamp", "dia"]
+        )
     ]
     col_data = candidatos_data[0] if candidatos_data else df.columns[0]
 
@@ -270,7 +294,9 @@ def carregar_dados_previsao(caminho: Path) -> tuple[pd.DataFrame, str, str | Non
     df = df.dropna(subset=[col_data]).sort_values(col_data)
 
     if df.empty:
-        raise ValueError(f"Não foi possível converter datas válidas na coluna '{col_data}'.")
+        raise ValueError(
+            f"Não foi possível converter datas válidas na coluna '{col_data}'."
+        )
 
     df = df[~df[col_data].duplicated(keep="last")].set_index(col_data)
 
@@ -287,8 +313,20 @@ def carregar_dados_previsao(caminho: Path) -> tuple[pd.DataFrame, str, str | Non
     df = df[colunas_numericas]
 
     candidatos_real = [
-        col for col in df.columns
-        if any(chave in col.lower() for chave in ["real", "actual", "true", "y_true", "close", "preco", "preço"])
+        col
+        for col in df.columns
+        if any(
+            chave in col.lower()
+            for chave in [
+                "real",
+                "actual",
+                "true",
+                "y_true",
+                "close",
+                "preco",
+                "preço",
+            ]
+        )
     ]
     coluna_real = candidatos_real[0] if candidatos_real else None
     colunas_previsao = [col for col in df.columns if col != coluna_real]
@@ -311,7 +349,11 @@ def calcular_metricas_serie(
     denominador = par[coluna_real].replace(0, np.nan)
     erro_pct = (diff_abs / denominador).abs() * 100
     mape = float(erro_pct.mean()) if erro_pct.notna().any() else float("nan")
-    ate_1pct = float((erro_pct.dropna() <= 1.0).mean() * 100) if erro_pct.notna().any() else float("nan")
+    ate_1pct = (
+        float((erro_pct.dropna() <= 1.0).mean() * 100)
+        if erro_pct.notna().any()
+        else float("nan")
+    )
 
     return {
         "mae": mae,
@@ -325,7 +367,7 @@ def gerar_tabela_comparativa(
     coluna_real: str,
     colunas_prev: list[str],
 ) -> pd.DataFrame:
-    """Monta tabela comparativa em linguagem simples para leigos."""
+    """Monta tabela comparativa ordenada do menor para o maior erro médio (%)."""
     linhas = []
     for col_p in colunas_prev:
         res = calcular_metricas_serie(df, coluna_real, col_p)
@@ -334,9 +376,15 @@ def gerar_tabela_comparativa(
                 {
                     "Série": formatar_nome_curto(col_p),
                     "col_original": col_p,
-                    "Erro médio (%)": round(res["mape"], 2) if np.isfinite(res["mape"]) else None,
+                    "Erro médio (%)": (
+                        round(res["mape"], 2) if np.isfinite(res["mape"]) else None
+                    ),
                     "Diferença média (pontos)": round(res["mae"], 2),
-                    "Dias até 1% do real": round(res["ate_1pct"], 1) if np.isfinite(res["ate_1pct"]) else None,
+                    "Dias até 1% do real": (
+                        round(res["ate_1pct"], 1)
+                        if np.isfinite(res["ate_1pct"])
+                        else None
+                    ),
                 }
             )
     if not linhas:
@@ -373,7 +421,9 @@ def montar_tabela_extremos(
     ordenado["Real"] = ordenado["Real"].map(lambda v: f"{v:,.2f}")
     ordenado[nome_prev] = ordenado[nome_prev].map(lambda v: f"{v:,.2f}")
     ordenado["Diferença"] = ordenado["Diferença"].map(lambda v: f"{v:,.2f}")
-    ordenado["Erro %"] = ordenado["Erro %"].map(lambda v: f"{v:.2f}%" if pd.notna(v) else "-")
+    ordenado["Erro %"] = ordenado["Erro %"].map(
+        lambda v: f"{v:.2f}%" if pd.notna(v) else "-"
+    )
 
     return ordenado.reset_index(drop=True)
 
@@ -391,23 +441,25 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-caminho_ativo = resolver_caminho_csv(CAMINHO_PREVISOES, CAMINHOS_FALLBACK)
+caminho_ativo = resolver_caminho_csv(CAMINHOS_PREVISOES)
 
 try:
-    df_base, nome_col_data, col_real, cols_prev = carregar_dados_previsao(caminho_ativo)
+    df_base, nome_col_data, col_real, cols_prev = carregar_dados_previsao(
+        caminho_ativo
+    )
 except Exception as erro:
     st.error(f"Não foi possível carregar os dados de previsão: {erro}")
     st.info(
-        "Dica: confira se o arquivo CSV existe no caminho configurado em "
-        "`CAMINHO_PREVISOES` no topo do `app.py`."
+        "Dica: gere `data/previsoes_modelos.csv` no notebook `04a_lineares_e_knn.ipynb` "
+        "ou verifique se `para_o_grupo/previsoes_exemplo.csv` existe."
     )
     st.stop()
 
 usando_exemplo = "exemplo" in caminho_ativo.name.lower()
 status_badge = (
-    f"🧪 Dados de demonstração (`{caminho_ativo}`)"
+    f"🧪 Modo demonstração — base exemplo (`{caminho_ativo}`)"
     if usando_exemplo
-    else f"✅ Dados oficiais dos modelos (`{caminho_ativo}`)"
+    else f"✅ Base de modelos gerada (`{caminho_ativo}`)"
 )
 st.caption(f"{status_badge}  |  Eixo de tempo: `{nome_col_data}`")
 
@@ -428,9 +480,9 @@ st.markdown(
         </ul>
         <div class="glossario-box">
             <strong>Glossário rápido para qualquer pessoa entender:</strong><br>
-            • <strong>Real:</strong> o valor histórico observado de fato no dia (é o gabarito).<br>
-            • <strong>Naive (base):</strong> uma referência simples (como repetir o valor anterior) usada para testar se um modelo entrega algo além do óbvio.<br>
-            • <strong>Exemplo:</strong> dado ilustrativo de teste usado antes da entrada dos modelos oficiais do projeto.
+- <strong>Real:</strong> o valor histórico observado de fato no dia (é o gabarito).<br>
+- <strong>Naive (base):</strong> uma referência simples (como repetir o valor anterior) usada para testar se um modelo entrega algo além do óbvio.<br>
+- <strong>Exemplo:</strong> dado ilustrativo de teste usado quando a base gerada em <code>data/previsoes_modelos.csv</code> ainda não está presente na máquina.
         </div>
     </div>
     """,
@@ -453,10 +505,14 @@ atalho_periodo = st.sidebar.radio(
 )
 
 if atalho_periodo == "Últimos 30 dias":
-    inicio_padrao = max(data_min, (pd.Timestamp(data_max) - pd.Timedelta(days=30)).date())
+    inicio_padrao = max(
+        data_min, (pd.Timestamp(data_max) - pd.Timedelta(days=30)).date()
+    )
     fim_padrao = data_max
 elif atalho_periodo == "Últimos 90 dias":
-    inicio_padrao = max(data_min, (pd.Timestamp(data_max) - pd.Timedelta(days=90)).date())
+    inicio_padrao = max(
+        data_min, (pd.Timestamp(data_max) - pd.Timedelta(days=90)).date()
+    )
     fim_padrao = data_max
 else:
     inicio_padrao, fim_padrao = data_min, data_max
@@ -486,7 +542,7 @@ if df_filtrado.empty:
     st.stop()
 
 todas_series = list(df_filtrado.columns)
-padrao_series = ([col_real] if col_real else []) + cols_prev[:3]
+padrao_series = ([col_real] if col_real else []) + cols_prev[:4]
 if not padrao_series:
     padrao_series = todas_series
 
@@ -530,7 +586,11 @@ if not df_comp.empty:
     )
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Menor erro no período", melhor_nome, help="Série que teve o menor erro percentual médio neste período.")
+    c1.metric(
+        "Menor erro no período",
+        melhor_nome,
+        help="Série que teve o menor erro percentual médio neste período.",
+    )
     c2.metric(
         "Erro médio (%)",
         f"{melhor_erro_pct:.2f}%" if pd.notna(melhor_erro_pct) else "-",
@@ -546,7 +606,11 @@ if not df_comp.empty:
         if col_real and df_filtrado[col_real].notna().any()
         else "-"
     )
-    c4.metric("Último valor (Real)", ultimo_real_txt, help="Último valor real registrado no período selecionado.")
+    c4.metric(
+        "Último valor (Real)",
+        ultimo_real_txt,
+        help="Último valor real registrado no período selecionado.",
+    )
 else:
     c1, c2, c3 = st.columns(3)
     c1.metric("Registros no período", f"{len(df_filtrado):,}".replace(",", "."))
@@ -585,7 +649,11 @@ with aba_curvas:
 with aba_ranking:
     if not df_comp.empty:
         melhor_serie_txt = str(df_comp.iloc[0]["Série"])
-        melhor_pct_txt = f"{df_comp.iloc[0]['Erro médio (%)']:.2f}%" if pd.notna(df_comp.iloc[0]["Erro médio (%)"]) else "-"
+        melhor_pct_txt = (
+            f"{df_comp.iloc[0]['Erro médio (%)']:.2f}%"
+            if pd.notna(df_comp.iloc[0]["Erro médio (%)"])
+            else "-"
+        )
         st.info(
             f"**Como ler este ranking:** barras menores significam erro menor (melhor proximidade do valor real). "
             f"Neste recorte, **{melhor_serie_txt}** ficou em 1º lugar com **{melhor_pct_txt}** de erro médio."
@@ -595,7 +663,9 @@ with aba_ranking:
 
         with col_esq:
             st.subheader("Erro médio (%) por série")
-            st.caption("Cada barra mostra o erro médio percentual frente ao valor real (quanto menor, melhor).")
+            st.caption(
+                "Cada barra mostra o erro médio percentual frente ao valor real (quanto menor, melhor)."
+            )
             st.altair_chart(montar_grafico_barras_erro(df_comp), use_container_width=True)
 
         with col_dir:
@@ -646,17 +716,5 @@ with aba_ranking:
 
 with aba_tabela:
     st.subheader("Dados detalhados do recorte")
-    st.caption("Confira os valores dia a dia do período escolhido ou clique no botão abaixo para baixar o CSV.")
-    df_exibicao = df_filtrado[series_selecionadas].rename(columns=formatar_nome_curto).copy()
-    df_exibicao.index = df_exibicao.index.strftime("%Y-%m-%d")
-    df_exibicao.index.name = nome_col_data
-
-    st.dataframe(df_exibicao, use_container_width=True)
-
-    csv_exportacao = df_exibicao.to_csv(index=True).encode("utf-8")
-    st.download_button(
-        label="⬇️ Baixar recorte filtrado (CSV)",
-        data=csv_exportacao,
-        file_name="previsoes_filtradas.csv",
-        mime="text/csv",
-    )
+    st.caption(
+        "Confira os valores dia a dia do período escolhido ou clique no botão abaixo para
