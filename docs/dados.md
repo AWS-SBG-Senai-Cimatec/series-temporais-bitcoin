@@ -1,36 +1,77 @@
-# Dados e preparação
+# Dados e reprodução local
 
-## Fonte e armazenamento
+## Fonte e arquivos
 
-O projeto usa o conjunto **Bitcoin Historical Data**, de Zielak / mczielinski, disponível no [Kaggle](https://www.kaggle.com/datasets/mczielinski/bitcoin-historical-data). Ele contém candles de 1 minuto da exchange Bitstamp. Baixe os dados manualmente e mantenha os arquivos localmente; a pasta `data/` não deve ser enviada ao GitHub.
+A fonte é o conjunto [Bitcoin Historical Data](https://www.kaggle.com/datasets/mczielinski/bitcoin-historical-data), de Zielak / mczielinski: candles de um minuto da Bitstamp. Baixe o CSV no Kaggle e mantenha-o localmente. O projeto não distribui nem versiona o arquivo de origem ou a base derivada.
 
-Para a análise, o projeto consome `data/btc_diario.csv`: uma linha por dia, em UTC, com `data` e as colunas `open`, `high`, `low`, `close` e `volume`. O dia corrente, ainda incompleto, deve ser removido. A agregação esperada é: primeiro `open`, máximo `high`, mínimo `low`, último `close` e soma de `volume` em cada dia UTC. Registre junto ao script de preparação a origem, o intervalo de candles e o tratamento de dias incompletos. `preparar_arquivos.py` no estado atual gera dados sintéticos de apoio; não é o agregador do CSV oficial.
+O CSV diário usado pelos notebooks é `data/btc_diario.csv`, com uma linha por dia UTC, índice/coluna `data` e as colunas `open`, `high`, `low`, `close`, `volume`. A origem costuma ter as colunas `Timestamp`, `Open`, `High`, `Low`, `Close` e `Volume_(BTC)`; o timestamp da fonte é Unix em segundos.
 
-## Carga
+## Gerar a base diária
 
-`src/features.py` oferece `carregar_diario(caminho)`. A função valida o arquivo, converte `data` para índice temporal diário, converte OHLCV para valores numéricos, ordena a série e sinaliza colunas, datas ou valores inválidos. O índice fica sem fuso após a interpretação em UTC, preservando a data do calendário UTC. Datas duplicadas são rejeitadas. Dias ausentes são diagnosticados no notebook exploratório e impedem `criar_features`, porque sem tratamento explícito o alvo da próxima linha poderia não ser o fechamento do dia seguinte.
+Use Python 3.10 ou superior. Na raiz do repositório, crie e ative um ambiente virtual e instale as dependências:
 
-Exemplo, a partir da raiz do repositório:
+```bash
+python -m venv .venv
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# macOS/Linux: source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+Depois de baixar o CSV no Kaggle, rode:
+
+```bash
+python preparar_arquivos.py --entrada "C:/caminho/bitcoin_minute.csv"
+```
+
+O padrão grava `data/btc_diario.csv`, a partir de `2018-01-01`. O final padrão é o último dia UTC anterior ao dia do último candle no arquivo, para não incluir um dia potencialmente incompleto. É possível escolher o intervalo, sempre com limites inclusivos:
+
+```bash
+python preparar_arquivos.py --entrada "C:/caminho/bitcoin_minute.csv" --inicio 2018-01-01 --fim 2024-12-31
+```
+
+`--fim` é uma escolha explícita e deve apontar para um dia completo. A agregação ordena os candles por instante UTC e calcula primeiro `open`, máximo `high`, mínimo `low`, último `close` e soma de `volume`. Datas sem candles no intervalo causam erro com a primeira data ausente; o script não interpola nem preenche lacunas. Corrija/obtenha uma fonte completa antes de modelar.
+
+Depois da geração, valide leitura, intervalo e continuidade pela raiz do repositório:
+
+```bash
+python -c "from src.features import carregar_diario; d=carregar_diario('data/btc_diario.csv'); assert d.index.equals(__import__('pandas').date_range(d.index.min(), d.index.max(), freq='D')); print(d.shape, d.index.min().date(), d.index.max().date())"
+```
+
+Para uma execução reproduzível, registre a versão/data de download da fonte, o intervalo selecionado, a linha de comando e o corte de treino. O agregador não baixa dados, não depende de rede e não produz previsões de exemplo.
+
+## Carregamento e formatos de data
+
+`src/features.py` contém `carregar_diario(caminho)`. Ele aceita `data` ou `Unnamed: 0` como coluna de data, além das colunas OHLCV em minúsculas. A data pode estar em ISO (`2024-03-04`), dia/mês/ano (`04/03/2024`), mês/dia/ano (`03/04/2024`), `AAAAMMDD` numérico ou Unix em segundos/milissegundos. Datas textuais ambíguas seguem a convenção brasileira: `03/04/2024` significa 3 de abril. Timestamps com fuso são convertidos para UTC antes de obter o dia.
+
+A carga valida datas, valores numéricos finitos e colunas obrigatórias, normaliza para um índice diário sem fuso (calendário UTC), ordena e rejeita datas repetidas. Dias ausentes são permitidos na carga para inspeção, mas `criar_features` exige calendário contínuo: sem isso, “próximo dia” poderia virar apenas “próxima linha disponível”.
 
 ```python
 from src.features import carregar_diario
 
 diario = carregar_diario("data/btc_diario.csv")
+print(diario.index.min(), diario.index.max(), diario.shape)
 ```
 
-## Variáveis e alvo
+## Variáveis, alvo e recorte temporal
 
-`criar_features(diario)` exige índice `DatetimeIndex` diário contínuo e colunas `close` e `volume`; produz um par `(X, y)`. Cada linha de `X` representa o instante em que a previsão seria feita, usando somente dados conhecidos até aquela data. As variáveis iniciais são fechamento defasado em 1, 7 e 30 dias, volume defasado em 1 dia e retorno de fechamento em 1 dia. `y` é o fechamento do dia seguinte, alinhado à data de origem da previsão. As linhas sem histórico suficiente ou sem alvo são descartadas.
+`criar_features(diario)` usa informações até o dia `t` para prever o fechamento do dia `t+1`. Produz `close_lag_1`, `close_lag_7`, `close_lag_30`, `volume_lag_1` e `retorno_1d`; linhas sem histórico ou alvo são removidas.
 
-O alvo de fechamento do próximo dia é a primeira definição de trabalho, conforme os combinados do projeto; deve ser revisto pelo grupo antes da comparação final de modelos.
+`dividir_treino_teste(df, fim_treino)` ordena cronologicamente, não embaralha e considera inclusivo o dia de corte no treino. O teste começa no dia seguinte. A data pode ser ISO ou uma data textual com convenção brasileira; use ISO para evitar ambiguidade, por exemplo `2024-12-31`. O recorte é feito pela data de origem da previsão. Assim, a linha de origem no corte fica no treino mesmo que seu alvo seja o fechamento do dia seguinte. Fixe o corte antes de comparar modelos.
 
-## Divisão temporal
+```python
+from src.features import carregar_diario, criar_features, dividir_treino_teste
 
-`dividir_treino_teste(df, fim_treino)` ordena os dados e divide sem embaralhar. A data informada é inclusiva no treino; as datas posteriores ficam no teste. O limite deve ser fixado e documentado na análise para permitir reproduzir os resultados. Como as linhas de `X` usam data de origem e `y` contém o fechamento seguinte, a separação é feita pela data em que a previsão é emitida.
+diario = carregar_diario("data/btc_diario.csv")
+X, y = criar_features(diario)
+treino, teste = dividir_treino_teste(X.join(y), "2024-12-31")
+```
 
-## Notebooks
+## Arquivos versionados e notebooks
 
-- `notebooks/01_exploracao.ipynb`: inspeção da série diária, qualidade, período, estatísticas e gráficos exploratórios.
-- `notebooks/02_features.ipynb`: criação de variáveis e alvo, conferência do alinhamento e divisão temporal.
+`data/` é ignorada pelo Git, exceto `data/.gitkeep`. Não adicione CSVs de origem/derivados, previsões, dumps, modelos ou cópias dos dados em outra pasta. O script grava apenas a saída solicitada; diretórios de saída personalizados também devem permanecer fora do commit.
 
-Os notebooks esperam `data/btc_diario.csv` na raiz do repositório. Não versionar o dataset nem resultados que possam conter cópias dos dados.
+- `notebooks/01_exploracao.ipynb`: período, qualidade, estatísticas e gráficos.
+- `notebooks/02_features.ipynb`: variáveis, alinhamento do alvo e divisão temporal.
+
+Execute Jupyter a partir da raiz do projeto para que os caminhos documentados funcionem.

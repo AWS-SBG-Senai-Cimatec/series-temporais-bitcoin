@@ -13,6 +13,11 @@ __pycache__/
 data/*
 !data/.gitkeep
 
+# Modelos e previsões gerados localmente
+models/*
+!models/.gitkeep
+previsoes*.csv
+
 # Segredos e arquivos locais
 .env
 *.key
